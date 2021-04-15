@@ -13,7 +13,7 @@
 - mano parameters
 
 ## Access the dataset
-- we also provide a script for reading the data
+- we provide a script for reading and manipulating the dataset
 - getCameraPose: get camera extrinsic parameters
 - getCameraIntrinsic: get camera intrinsic parameters
 - readRGB(ith,iv): get the ith rgb image of the iv view
