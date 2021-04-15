@@ -22,8 +22,8 @@
 - get4viewCloud: get point cloud generated from depth
 - code is [here](https://github.com/ShichengChen/ChenPyLib)
 
-
+ 
 ## Info for our camera calibration
-- [here](https://github.com/ShichengChen/multiviewDataset/camera-calibration)
+- [here](https://github.com/ShichengChen/multiviewDataset/tree/main/camera-calibration)
 
     
