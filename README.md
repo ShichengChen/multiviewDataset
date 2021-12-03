@@ -20,7 +20,6 @@
 - readDepth(ith,iv): get the ith depth image of the iv view
 - getManoParam: get mano parameter
 - get4viewCloud: get point cloud generated from depth
-- code is [here](https://github.com/ShichengChen/ChenPyLib/blob/main/cscPy/multiviewDataset/toolkit.py)
 - data is [here](https://www.dropbox.com/sh/zp2ruks8w8gegm8/AAAHEaFT70bHKJBh33e5DjfSa?dl=0)
 
  
