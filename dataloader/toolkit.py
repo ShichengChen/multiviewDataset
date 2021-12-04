@@ -1,13 +1,18 @@
-from dataloader.mano.network.manolayer import MANO_SMPL
-import os,pickle
-from dataloader.globalCamera.util import get_cameras_from_dir,visualize_better_qulity_depth_map
+import sys
+sys.path.append("..")
+sys.path.append(".")
+
+from dataloader.manolayer import MANO_SMPL
+from dataloader.globalCamera.util import visualize_better_qulity_depth_map,manoPath,mvdatasetpaths
 from dataloader.globalCamera.camera import CameraIntrinsics,perspective_projection,perspective_back_projection
 from dataloader.globalCamera.constant import Constant
-from dataloader.dataloader.MFjointsDataloader import MF3D
+from dataloader.globalCamera.util import MF3D
+import os,pickle
+
 import numpy as np
 import torch
 import cv2
-from dataloader.Const.const import *
+
 def AxisRotMat(angles,rotation_axis):
     x,y,z=rotation_axis
     xx,xy,xz,yy,yz,zz=x*x,x*y,x*z,y*y,y*z,z*z
@@ -344,8 +349,7 @@ class MultiviewDatasetDemo():
         return ujoints[5]
     def getScale(self,idx,iv):
         ujoints=self.joints4view[iv,idx,:21,:3,0].copy()
-        from dataloader.mano.network.utilsSmallFunctions import vector_dis
-        return vector_dis(ujoints[5],ujoints[6])
+        return np.sum((ujoints[5]-ujoints[6])**2)
 
 
     def getPose2D(self,idx,view):
