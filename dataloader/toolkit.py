@@ -3,10 +3,9 @@ sys.path.append("..")
 sys.path.append(".")
 
 from dataloader.manolayer import MANO_SMPL
-from dataloader.globalCamera.util import visualize_better_qulity_depth_map,manoPath,mvdatasetpaths
+from dataloader.globalCamera.util import visualize_better_qulity_depth_map
 from dataloader.globalCamera.camera import CameraIntrinsics,perspective_projection,perspective_back_projection
 from dataloader.globalCamera.constant import Constant
-from dataloader.globalCamera.util import MF3D
 import os,pickle
 
 import numpy as np
@@ -34,8 +33,8 @@ def AxisRotMat(angles,rotation_axis):
     rot_mats[3,3]=1
     return rot_mats
 class MultiviewDatasetDemo():
-    def __init__(self,manoPath=manoPath,
-                 file_path=mvdatasetpaths[0],
+    def __init__(self,manoPath,
+                 file_path,
                  loadManoParam=False,
     ):
         self.mano_right = MANO_SMPL(manoPath, ncomps=45)
@@ -83,8 +82,6 @@ class MultiviewDatasetDemo():
         self.avemmcp=np.mean(joints4view[rootcameraidx,:,5,:3],axis=0)
 
         if(loadManoParam):
-            train_dataset = MF3D(file_path=file_path, adjust=0, onlygt=False, usedirect=True)
-            self.train_dataset = train_dataset
             with open(os.path.join(self.baseDir,self.date+'manoParam.pkl'), 'rb') as f:
                 self.manoparam = pickle.load(f)
 
@@ -158,6 +155,8 @@ class MultiviewDatasetDemo():
         vertex=vertex.cpu()
         scale=scale.cpu()
         joint_root=joint_root.cpu()
+        print('scale',scale.shape,scale)
+        print('joint_root',joint_root.shape,joint_root)
         vertices = (vertex * scale + joint_root)[0].cpu().detach().numpy() * 1000
         vertices = np.concatenate([vertices, np.ones([vertices.shape[0], 1])], axis=1)
         vertices = np.expand_dims(vertices, axis=-1)
@@ -168,10 +167,9 @@ class MultiviewDatasetDemo():
         #return a dictionary which includes mano pose parameters, scale, and transition
         assert (self.loadManoParam==True)
         results=self.manoparam[idx]
-        ids, (joints_gt, scale, joint_root, direct) = self.train_dataset.__getitem__(idx)
-        direct = direct.to('cuda')
-        joints_gt = joints_gt.to('cuda')
-        jd = torch.cat([joints_gt, direct], dim=0).reshape(1, 41, 3)
+        c=np.sqrt(np.sum((self.joints[idx,5,:3,0]/1000-self.joints[idx,1,:3,0]/1000)**2))
+        scale=torch.tensor(c,dtype=torch.float32)
+        joint_root=torch.tensor(self.joints[idx,5,:3,0]/1000,dtype=torch.float32)
         return results,scale, joint_root
 
 
@@ -399,11 +397,17 @@ if __name__ == "__main__":
     if (
     not os.path.exists(file_path4)): file_path4 = "/home/shicheng/dataset/9-25-1-2/mlresults/9-25-1-2_1result_30.pkl"
     file_paths = [file_path1,file_path2, file_path3, file_path4]
+    file_paths = [file_path3]
     #file_paths = [file_path1]
     # file3 2300
+    manoPath = '/home/csc/MANO-hand-model-toolkit/mano/models/MANO_RIGHT.pkl'
+    if not os.path.exists(manoPath):
+        manoPath = '/home/shicheng/MANO-hand-model-toolkit/mano/models/MANO_RIGHT.pkl'
+    if not os.path.exists(manoPath):
+        manoPath = '/home/csc/MANO-hand-model-toolkit/mano/models/MANO_RIGHT.pkl'
     for path in file_paths:
-        demo=MultiviewDatasetDemo(loadManoParam=True,file_path=path)
-        for i in range(demo.N-2,demo.N):
+        demo=MultiviewDatasetDemo(loadManoParam=True,file_path=path,manoPath=manoPath)
+        for i in range(0,20):
             meshcolor=demo.drawMesh(i)
             cv2.imshow("meshcolor", meshcolor)
             imgs=demo.drawPose4view(i)
