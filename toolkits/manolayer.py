@@ -15,27 +15,11 @@ def minusHomoVectors(v0, v1):
     else:
         v[..., -1] = 1
     return v
-mano2bighand_skeidx = [0, 13, 1, 4, 10, 7, 14, 15, 16, 2, 3, 17, 5, 6, 18, 11, 12, 19, 8, 9, 20]
-STB2Bighand_skeidx = [0, 17, 13, 9, 5, 1, 18, 19, 20, 14, 15, 16, 10, 11, 12, 6, 7, 8, 2, 3, 4]
-Bighand2mano_skeidx = [0, 2, 9, 10, 3, 12, 13, 5, 18, 19, 4, 15, 16, 1, 6, 7, 8, 11, 14, 17, 20]
-RHD2Bighand_skeidx = [0,4,8,12,16,20,3,2,1,7,6,5,11,10,9,15,14,13,19,18,17]
-SynthHands2Bighand_skeidx=[0,1,5,9,13,17,2,6,10,14,18,3,7,11,15,19,4,8,12,16,20]
-MV2mano_skeidx=[0,1,2,3, 5,6,7, 13,14,15, 9,10,11, 17,18,19, 20,4,8,12,16]
+
 class MANO_SMPL(nn.Module):
-    def __init__(self, mano_pkl_path, ncomps = 10, flat_hand_mean=False,cuda=True,oriorder=False,device='cuda',userotJoints=False,
-                 hpl=None,flex=True,notip=False,debug=False,datasetname=None,uniqueTemp=False,speedup=False,palmcopy=False):
+    def __init__(self, mano_pkl_path, ncomps = 10, flat_hand_mean=False,cuda=True,device='cuda'):
         super(MANO_SMPL, self).__init__()
-        print("mano use flex rectification,speedup,palmcopy",flex,notip,datasetname,speedup,palmcopy)
-        self.flex=flex
-        self.palmcopy=palmcopy
-        self.uniqueTemp=uniqueTemp
-        self.hpl = hpl
-        self.notip=notip
-        self.speedup=speedup
-        self.debug=debug
-        self.datasetname=datasetname
-        self.oriorder=oriorder
-        self.userotJoints=userotJoints
+        self.userotJoints=False
         # Load the MANO_RIGHT.pkl
         with open(mano_pkl_path, 'rb') as f:
             model = pickle.load(f, encoding='latin1')
@@ -265,9 +249,6 @@ class MANO_SMPL(nn.Module):
         verts = trans + verts
         joints = scale * joints
         joints = trans + joints
-
-        if(self.oriorder==False):joints = joints[:, mano2bighand_skeidx, :]
-
         # mmcp is 3th joint in bighand order
         if mmcp_center:
             mmcp = joints[:, 3, :].clone().unsqueeze(1)

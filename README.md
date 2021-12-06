@@ -21,6 +21,10 @@
 - getManoParam: get mano parameter
 - get4viewCloud: get point cloud generated from depth
 - data is [here](https://www.dropbox.com/sh/zp2ruks8w8gegm8/AAAHEaFT70bHKJBh33e5DjfSa?dl=0)
+- data usage in data toolkit [here](https://github.com/ShichengChen/multiviewDataset/blob/main/toolkits/toolkit.py)
+    - drawMesh
+    - drawPose4view
+    - getBetterDepth
 
  
 ## Info for our camera calibration

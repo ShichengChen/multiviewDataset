@@ -2,10 +2,10 @@ import sys
 sys.path.append("..")
 sys.path.append(".")
 
-from dataloader.manolayer import MANO_SMPL
-from dataloader.globalCamera.util import visualize_better_qulity_depth_map
-from dataloader.globalCamera.camera import CameraIntrinsics,perspective_projection,perspective_back_projection
-from dataloader.globalCamera.constant import Constant
+from toolkits.manolayer import MANO_SMPL
+from toolkits.globalCamera.util import visualize_better_qulity_depth_map
+from toolkits.globalCamera.camera import CameraIntrinsics,perspective_projection,perspective_back_projection
+from toolkits.globalCamera.constant import Constant
 import os,pickle
 
 import numpy as np
@@ -40,7 +40,7 @@ class MultiviewDatasetDemo():
         self.mano_right = MANO_SMPL(manoPath, ncomps=45)
         self.loadManoParam=loadManoParam
         self.readNotFromBinary=True
-        baseDir = file_path[:file_path.rfind('/', 0, file_path.rfind('/'))]
+        baseDir = file_path
         self.baseDir=baseDir
         self.date = baseDir[baseDir.rfind('/') + 1:]
         calib_path = os.path.join(baseDir, 'calib.pkl')
@@ -155,8 +155,6 @@ class MultiviewDatasetDemo():
         vertex=vertex.cpu()
         scale=scale.cpu()
         joint_root=joint_root.cpu()
-        print('scale',scale.shape,scale)
-        print('joint_root',joint_root.shape,joint_root)
         vertices = (vertex * scale + joint_root)[0].cpu().detach().numpy() * 1000
         vertices = np.concatenate([vertices, np.ones([vertices.shape[0], 1])], axis=1)
         vertices = np.expand_dims(vertices, axis=-1)
@@ -224,132 +222,6 @@ class MultiviewDatasetDemo():
         c = cv2.addWeighted(color, 0.1, recolor, 0.9, 0.0)
         return c
 
-    def drawMask(self,idx):
-        #call after get4viewManovertices and
-        self.getManoVertex(idx)
-        sampleForMask=-1
-        self.get4viewCloud(idx,sampleN=sampleForMask,disprio=1.4)
-        vertex=self.vertices.copy()
-        cloud=self.cloud.copy()
-        vertex = vertex.reshape(778, 4,1)
-        cloud = cloud.reshape(sampleForMask, 4,1)
-        dcloud = np.min(np.sqrt(np.sum((cloud[:,:3].reshape(sampleForMask, 1, 3) - vertex[:,:3].reshape(1, 778, 3)) ** 2, axis=2)), axis=1)
-        dcloud = dcloud.reshape(sampleForMask)
-        cloud=cloud[dcloud < 10]
-        assert (cloud.shape[0]>0),"nothing left for draw"
-        cloud4v = np.ones([4, cloud.shape[0], 4, 1])
-        background = np.ones([4, 480, 640, 3]).astype(np.uint8) * 255
-        for iv in range(4):
-            inv = np.linalg.inv(self.camera_pose[iv])
-            cloud4v[iv] = inv @ cloud
-            for i in range(cloud4v.shape[1]):
-                uvd = perspective_projection(cloud4v[iv, i, :3, 0], self.camera[iv]).astype(np.int64)
-                background[iv] = cv2.circle(background[iv], tuple(uvd[:2]), 1, (0, 0, 0))
-        background = np.concatenate([background[0], background[1], background[2], background[3]], axis=1)
-        return background
-
-
-
-
-
-    def get4viewCloud(self,idx,sampleN=1000,disprio=1.1,usedview=[0,1,2,3]):
-        pointlist=[]
-        for iv in usedview:
-            dm=self.readDepth(idx,iv)
-            u, v = np.meshgrid(range(640), range(480))
-            u, v, d = u.reshape(-1), v.reshape(-1), dm.reshape(-1)
-            uvd = np.transpose(np.stack([u.astype(np.float32), v.astype(np.float32), d]))
-            xyz_center=self.joints4view[iv,idx,5,:3,0].copy()
-            wristjoint = (self.joints4view[iv,idx,0,:3,0]).copy()
-            tipjoint = (self.joints4view[iv,idx,8,:3,0]).copy()
-            dis1 = np.sqrt(np.sum((xyz_center - wristjoint) ** 2))
-            dis2 = np.sqrt(np.sum((xyz_center - tipjoint) ** 2))
-            dis = max(dis1, dis2)
-
-            cloud = perspective_back_projection(uvd, self.camera[iv]).squeeze()
-            cloud = np.dstack((cloud[:, 0], cloud[:, 1], cloud[:, 2], np.ones(cloud.shape[0]))).squeeze()
-            validIndicies = (np.abs(cloud[:, 0] - xyz_center[0]) < dis * disprio) & \
-                            (np.abs(cloud[:, 1] - xyz_center[1]) < dis * disprio) & \
-                            (np.abs(cloud[:, 2] - xyz_center[2]) < dis * disprio)
-            cloud = cloud[validIndicies, :]
-
-            cloud = self.camera_pose[iv] @ np.expand_dims(cloud, -1)
-
-            pointlist.append(cloud.copy().astype(np.float32))
-
-        cloud = np.concatenate(pointlist, axis=0).reshape(-1, 4, 1)
-
-        randInidices = np.random.permutation(np.arange(len(cloud)))
-        if(sampleN>=1):
-            cloud = cloud[randInidices[:sampleN, ], :]
-            cloud4v = np.ones([4, sampleN, 4, 1])
-        else:
-            cloud = cloud[:, :]
-            cloud4v = np.ones([4, cloud.shape[0], 4, 1])
-        #save cloud after sampling
-        self.cloud=cloud
-        for iv in range(4):
-            inv = np.linalg.inv(self.camera_pose[iv])
-            cloud4v[iv] = inv @ cloud
-        self.cloud4v=cloud4v
-        return cloud4v
-
-    def drawCloud4view(self,idx,sampleN=1000,view=4,depthInfluenceColor=False,seperateCloud=False):
-        assert (view==1 or view==4),"only support 4 and 1 view"
-        background = np.ones([4, 480, 640, 3]).astype(np.uint8) * 255
-        if(seperateCloud):
-            cloud4v=self.get4viewCloud(idx,sampleN)
-            for iv in range(4):
-                cloud4v[iv]=self.get4viewCloud(idx,sampleN,disprio=1.1,usedview=[iv])[iv].copy()
-        else:
-            cloud4v=self.get4viewCloud(idx,sampleN)
-        for iv in range(4):
-            vis = np.zeros([480, 640])
-            for i in range(cloud4v.shape[1]):
-                uvd=perspective_projection(cloud4v[iv,i,:3,0],self.camera[iv]).astype(np.int64)
-                if(uvd[1]<0 or uvd[0]<0 or uvd[0]>=640 or uvd[1]>=480 or vis[uvd[1],uvd[0]]==255):continue
-                #if(iv==0):print('ori', uvd[-1])
-                dist=255
-                if(depthInfluenceColor):dist = int(np.clip(np.array([(uvd[-1] - 500)])*3, 50, 200).astype(int)[0])
-                #if(iv==0):print('after',int(dist))
-                vis=cv2.circle(vis, tuple(uvd[:2]), 1, (255),-1)
-
-                background[iv]=cv2.circle(background[iv],tuple(uvd[:2]),1,(dist, 0, 200-dist))
-                #background[iv]=cv2.circle(background[iv],tuple(uvd[:2]),1,(dist, dist, dist))
-        if(view==4):
-            background = np.concatenate([background[0], background[1], background[2], background[3]], axis=1)
-        else:
-            background = background[0]
-        return background
-
-    def drawSelfRotationCloudView0(self,idx,degree,depthInfluenceColor=False):
-        rot=AxisRotMat(degree,[1,0,0])
-        c=self.cloud4v[0].copy()
-        wrist=self.joints4view[0,idx,5:6,:3,0]
-        c[:,:3,0]-=wrist
-        c=rot@c
-        c[:,:3,0]+=wrist
-        background = np.ones([480, 640, 3]).astype(np.uint8) * 255
-        vis = np.zeros([480, 640])
-        for i in range(c.shape[0]):
-            uvd = perspective_projection(c[i, :3, 0], self.camera[0]).astype(np.int64)
-            if (uvd[1] < 0 or uvd[0] < 0 or uvd[0] >= 640 or uvd[1] >= 480 or vis[uvd[1], uvd[0]] == 255): continue
-            vis = cv2.circle(vis, tuple(uvd[:2]), 1, (255), -1)
-            dist = 255
-            if (depthInfluenceColor): dist = int(np.clip(np.array([(uvd[-1] - 500)]) * 3, 50, 200).astype(int)[0])
-            background = cv2.circle(background, tuple(uvd[:2]), 1, (dist, 0, 200-dist))
-            #background=cv2.circle(background,tuple(uvd[:2]),1,(dist, dist, dist))
-        return background
-
-
-    def getMMCP(self,idx,iv):
-        ujoints=self.joints4view[iv,idx,:21,:3,0].copy()
-        return ujoints[5]
-    def getScale(self,idx,iv):
-        ujoints=self.joints4view[iv,idx,:21,:3,0].copy()
-        return np.sum((ujoints[5]-ujoints[6])**2)
-
-
     def getPose2D(self,idx,view):
         ujoints = self.joints4view[view, idx, :21, :3, 0].copy()
         uvdlist=[]
@@ -384,27 +256,14 @@ class MultiviewDatasetDemo():
 
 
 if __name__ == "__main__":
-    file_path1 = "/media/csc/Seagate Backup Plus Drive/dataset/7-14-1-2/mlresults/7-14-1-2_3_1result_31.pkl"
-    if (
-    not os.path.exists(file_path1)): file_path1 = "/home/shicheng/dataset/7-14-1-2/mlresults/7-14-1-2_3_1result_31.pkl"
-    file_path2 = "/media/csc/Seagate Backup Plus Drive/dataset/9-10-1-2/mlresults/9-10-1-2_1result_38.pkl"
-    if (
-    not os.path.exists(file_path2)): file_path2 = "/home/shicheng/dataset/9-10-1-2/mlresults/9-10-1-2_1result_38.pkl"
-    file_path3 = "/media/csc/Seagate Backup Plus Drive/dataset/9-17-1-2/mlresults/9-17-1-2_1result_45.pkl"
-    if (
-    not os.path.exists(file_path3)): file_path3 = "/home/shicheng/dataset/9-17-1-2/mlresults/9-17-1-2_1result_45.pkl"
-    file_path4 = '/media/csc/Seagate Backup Plus Drive/dataset/9-25-1-2/mlresults/9-25-1-2_1result_30.pkl'
-    if (
-    not os.path.exists(file_path4)): file_path4 = "/home/shicheng/dataset/9-25-1-2/mlresults/9-25-1-2_1result_30.pkl"
+    file_path1 = "/media/csc/Seagate Backup Plus Drive/dataset/7-14-1-2"
+    file_path2 = "/media/csc/Seagate Backup Plus Drive/dataset/9-10-1-2"
+    file_path3 = "/media/csc/Seagate Backup Plus Drive/dataset/9-17-1-2"
+    file_path4 = '/media/csc/Seagate Backup Plus Drive/dataset/9-25-1-2'
     file_paths = [file_path1,file_path2, file_path3, file_path4]
-    file_paths = [file_path3]
-    #file_paths = [file_path1]
+    #file_paths = [file_path3]
     # file3 2300
     manoPath = '/home/csc/MANO-hand-model-toolkit/mano/models/MANO_RIGHT.pkl'
-    if not os.path.exists(manoPath):
-        manoPath = '/home/shicheng/MANO-hand-model-toolkit/mano/models/MANO_RIGHT.pkl'
-    if not os.path.exists(manoPath):
-        manoPath = '/home/csc/MANO-hand-model-toolkit/mano/models/MANO_RIGHT.pkl'
     for path in file_paths:
         demo=MultiviewDatasetDemo(loadManoParam=True,file_path=path,manoPath=manoPath)
         for i in range(0,20):
