@@ -37,7 +37,10 @@ class MultiviewDatasetDemo():
                  file_path,
                  loadManoParam=False,
     ):
-        self.mano_right = MANO_SMPL(manoPath, ncomps=45)
+        if(manoPath==None):
+            self.mano_right = None
+        else:
+            self.mano_right = MANO_SMPL(manoPath, ncomps=45)
         self.loadManoParam=loadManoParam
         self.readNotFromBinary=True
         baseDir = file_path
@@ -145,7 +148,6 @@ class MultiviewDatasetDemo():
         return np.hstack(dlist)
 
     def getManoVertex(self,idx):
-        #print(self.getManoParamFromDisk(idx))
         results,scale, joint_root = self.getManoParamFromDisk(idx)
         vertex, joint_pre = \
             self.mano_right.get_mano_vertices(results['pose_aa'][:, 0:1, :],
@@ -261,8 +263,6 @@ if __name__ == "__main__":
     file_path3 = "/media/csc/Seagate Backup Plus Drive/dataset/9-17-1-2"
     file_path4 = '/media/csc/Seagate Backup Plus Drive/dataset/9-25-1-2'
     file_paths = [file_path1,file_path2, file_path3, file_path4]
-    #file_paths = [file_path3]
-    # file3 2300
     manoPath = '/home/csc/MANO-hand-model-toolkit/mano/models/MANO_RIGHT.pkl'
     for path in file_paths:
         demo=MultiviewDatasetDemo(loadManoParam=True,file_path=path,manoPath=manoPath)
