@@ -39,7 +39,7 @@ python toolkit.py
     - 13 mcp pinky, 14 pip pinky, 15 dip pinky, 16 tip pinky
     - 17 mcp thumb, 18 pip thumb, 19 dip thumb, 20 tip thumb
 - mano parameters   
-![image](data/multiviewdataset.png)
+![image](data/multiviewdataset.gif)
      
 ## Access the dataset
 - data usage in [toolkit.py](https://github.com/ShichengChen/multiviewDataset/blob/main/toolkits/toolkit.py)
