@@ -67,6 +67,5 @@
    - train: depth image of hand with a glove, hand mask. Inference: depth image of hand **without** gloves
  - using a unsupervised learning method which provided by the paper: Dual Grid Net: hand mesh vertex regression from single depth maps. We can get hand joint locations from depth images.
  - If we use the unsupervised learning directly, we cannot get very accurate results. Here we use a semi supervised learning method. We hand labeled 40 frames of images. By using these images, we use supervised learning to guide the model to better results.
- - EPE loss here is 11.76mm. The error comes from method error and system error we mentioned before.
 
  
