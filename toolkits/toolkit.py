@@ -281,11 +281,13 @@ if __name__ == "__main__":
     for path in file_paths:
         demo=MultiviewDatasetDemo(loadManoParam=True,file_path=path,manoPath=manoPath)
         for i in range(0,20):
-            meshcolor=demo.drawMesh(i)
-            cv2.imshow("meshcolor", meshcolor)
-            imgs=demo.drawPose4view(i)
-            cv2.imshow("imgs", imgs)
-            depth = demo.getBetterDepth(i)
+            # meshcolor=demo.drawMesh(i)
+            # cv2.imshow("meshcolor", meshcolor)
+            # imgs=demo.drawPose4view(i)
+            # cv2.imshow("imgs", imgs)
+            # depth = demo.getBetterDepth(i)
+            # cv2.imshow("depth", depth)
+            depth = demo.getMask(i)
             cv2.imshow("depth", depth)
             cv2.waitKey(1)
 
