@@ -111,6 +111,20 @@ class MultiviewDatasetDemo():
         rgbpath = os.path.join(rgbpath, "%05d" % (idx) + '_' + str(iv) + '.jpg')
         return cv2.imread(rgbpath)
 
+
+    def getMask(self,idx,uselist=False):
+        dms = []
+        for iv in range(4): dms.append(self.readMask(idx, iv))
+        if (uselist):
+            return dms
+        else:
+            return np.hstack(dms)
+
+    def readMask(self,idx,iv):
+        rgbpath = os.path.join(self.baseDir, 'mask')
+        rgbpath = os.path.join(rgbpath, "%05d" % (idx) + '_' + str(iv) + '.jpg')
+        return cv2.imread(rgbpath)
+
     def decodeDepth(self,rgb:np.ndarray):
         """ Converts a RGB-coded depth into depth. """
         assert (rgb.dtype==np.uint8)
